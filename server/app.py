@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, make_response, jsonify, request, session
+from flask import Flask, make_response, jsonify, request, session, g
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 
@@ -83,16 +83,35 @@ class CheckSession(Resource):
             return user.to_dict(), 200
         
         return {}, 401
+    
+@app.before_request
+def check_if_logged_in():
+    user_id = session.get('user_id')
+    if not user_id:
+        # Return a JSON response for unauthorized access
+        return make_response({'error': 'Unauthorized'}, 401)
+
+
 
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        articles = Article.query.filter_by(is_member_only = True).all()
+        
+        if not articles:
+            return make_response({'message':'There are no articles'})
+        
+        articles_to_return = [article.to_dict() for article in articles]
+        return make_response(articles_to_return, 200)
+
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+        article = Article.query.filter(Article.is_member_only == True and Article.id == id).first()
+        if not article:
+            return make_response({'error':f'article not found {session.user_id}'}, 404)
+        return make_response(article.to_dict(), 200)
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
@@ -106,3 +125,13 @@ api.add_resource(MemberOnlyArticle, '/members_only_articles/<int:id>', endpoint=
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
+
+
+# We added a new attribute to our articles, is_member_only, to reflect whether the article should only be available to authorized users of 
+# the site. We also created two new views: MemberOnlyIndex and MemberOnlyArticle.
+
+# Your goal is to add the following functionality to the new views:
+
+# If a user is not signed in, the get() methods in each view should return a status code of 401 unauthorized, along with an error message.
+# If the user is signed in, the get() methods in each view should return the JSON data for the members-only articles and the members-only 
+# article by ID, respectively.

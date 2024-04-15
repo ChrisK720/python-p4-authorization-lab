@@ -22,6 +22,8 @@ class Article(db.Model, SerializerMixin):
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
+    
+
     def __repr__(self):
         return f'Article {self.id} by {self.author}'
 
